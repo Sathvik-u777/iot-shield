@@ -1,0 +1,7 @@
+# Python 
+.venv/ 
+__pycache__/ 
+*.pyc 
+models/*.pkl 
+data/dataset.csv 
+data/combined.csv 
