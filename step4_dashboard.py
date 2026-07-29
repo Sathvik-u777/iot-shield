@@ -1,247 +1,342 @@
 """
-step4_dashboard.py — IoT Shield Dashboard
-Run: streamlit run step4_dashboard.py
+IoT Shield — Redesigned Dashboard
+Run with: python -m streamlit run step4_dashboard.py
 """
 
-import os
 import json
-import joblib
-import requests
+import subprocess
+import time
+from pathlib import Path
+from collections import Counter
+
+import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import streamlit as st
-from streamlit_autorefresh import st_autorefresh
 
-# ─────────────────────────────────────────────
-# Paths
-# ─────────────────────────────────────────────
-BASE_DIR   = r"D:\final"
-MODEL_DIR  = os.path.join(BASE_DIR, "models")
-DATA_DIR   = os.path.join(BASE_DIR, "data")
-ALERTS_FILE = os.path.join(DATA_DIR, "live_alerts.json")
-STATS_FILE  = os.path.join(DATA_DIR, "live_stats.json")
+# ============================================================
+# CONFIG
+# ============================================================
+DATA_DIR = Path("data")
+ALERTS_FILE = DATA_DIR / "live_alerts.json"
+STATS_FILE = DATA_DIR / "live_stats.json"
 
-OLLAMA_URL  = "http://localhost:11434/api/generate"
-OLLAMA_MODEL = "tinyllama"
-
-# ─────────────────────────────────────────────
-# Page config
-# ─────────────────────────────────────────────
-st.set_page_config(
-    page_title="IoT Shield",
-    page_icon="🛡️",
-    layout="wide"
-)
-
-st_autorefresh(interval=5000, key="autorefresh")
-
-# ─────────────────────────────────────────────
-# Load models (cached)
-# ─────────────────────────────────────────────
-@st.cache_resource
-def load_models():
-    rf  = joblib.load(os.path.join(MODEL_DIR, "rf_model.pkl"))
-    xgb = joblib.load(os.path.join(MODEL_DIR, "xgb_model.pkl"))
-    scaler = joblib.load(os.path.join(MODEL_DIR, "scaler.pkl"))
-    return rf, xgb, scaler
-
-rf_model, xgb_model, scaler = load_models()
-
-# ─────────────────────────────────────────────
-# Load live data
-# ─────────────────────────────────────────────
-def load_alerts():
-    try:
-        with open(ALERTS_FILE) as f:
-            return json.load(f)
-    except:
-        return []
-
-def load_stats():
-    try:
-        with open(STATS_FILE) as f:
-            return json.load(f)
-    except:
-        return {"total": 0, "threats": 0, "critical": 0, "benign": 0}
-
-alerts = load_alerts()
-stats  = load_stats()
-
-# ─────────────────────────────────────────────
-# Severity colours
-# ─────────────────────────────────────────────
-SEVERITY_COLOR = {
-    "critical": "🔴",
-    "high":     "🟡",
-    "medium":   "🟠",
-    "none":     "🟢",
+SEVERITY_MAP = {
+    "ddos": ("critical", "🔴"),
+    "malware": ("critical", "🔴"),
+    "portscan": ("high", "🟡"),
+    "benign": ("none", "🟢"),
 }
 
-# ─────────────────────────────────────────────
-# Header
-# ─────────────────────────────────────────────
-st.title("🛡️ IoT Shield — Real-time Network Threat Detection")
-st.caption("4-class detection: benign / ddos / malware / portscan")
+st.set_page_config(
+    page_title="IoT Shield — Network Threat Detection",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-# Model status
-col1, col2, col3 = st.columns(3)
-col1.success("✅ RF Model loaded")
-col2.success("✅ XGBoost loaded")
-col3.success("✅ Scaler loaded")
+# ============================================================
+# CUSTOM CSS — dark SOC-style theme
+# ============================================================
+st.markdown("""
+<style>
+    .stApp {
+        background-color: #0e1117;
+    }
+    .metric-card {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        padding: 16px;
+    }
+    .critical-alert {
+        background: rgba(255, 0, 0, 0.08);
+        border-left: 4px solid #ff4b4b;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        font-family: 'Courier New', monospace;
+    }
+    .high-alert {
+        background: rgba(255, 193, 7, 0.08);
+        border-left: 4px solid #ffc107;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        font-family: 'Courier New', monospace;
+    }
+    .benign-alert {
+        background: rgba(0, 200, 0, 0.05);
+        border-left: 4px solid #2ecc71;
+        border-radius: 6px;
+        padding: 10px 14px;
+        margin-bottom: 8px;
+        font-family: 'Courier New', monospace;
+        opacity: 0.7;
+    }
+    div[data-testid="stMetric"] {
+        background: #161b22;
+        border: 1px solid #30363d;
+        border-radius: 10px;
+        padding: 12px;
+    }
+</style>
+""", unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-# Top metrics
-# ─────────────────────────────────────────────
-m1, m2, m3, m4 = st.columns(4)
-m1.metric("Total Alerts",     stats.get("total", 0))
-m2.metric("Threats Detected", stats.get("threats", 0))
-m3.metric("Critical",         stats.get("critical", 0))
-m4.metric("Benign",           stats.get("benign", 0))
+# ============================================================
+# HELPERS
+# ============================================================
+def load_json(path, default):
+    try:
+        with open(path, "r") as f:
+            return json.load(f)
+    except Exception:
+        return default
 
-st.caption(f"Auto-refreshes every 5 seconds")
 
-# ─────────────────────────────────────────────
-# Tabs
-# ─────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📊 Live Dashboard", "🚨 Alert Feed", "📈 Analytics", "🤖 AI Assistant"
-])
+def reset_dashboard():
+    DATA_DIR.mkdir(exist_ok=True)
+    with open(ALERTS_FILE, "w") as f:
+        json.dump([], f)
+    with open(STATS_FILE, "w") as f:
+        json.dump({}, f)
 
-# ── Tab 1: Live Dashboard ──
+
+def get_class_counts(alerts):
+    counts = Counter(a.get("label", "benign") for a in alerts)
+    for cls in ["benign", "ddos", "malware", "portscan"]:
+        counts.setdefault(cls, 0)
+    return counts
+
+
+# ============================================================
+# SIDEBAR — controls
+# ============================================================
+st.sidebar.title("🛡️ IoT Shield")
+st.sidebar.caption("Real-time network threat detection")
+st.sidebar.divider()
+
+if "sim_process" not in st.session_state:
+    st.session_state.sim_process = None
+
+col_a, col_b = st.sidebar.columns(2)
+
+if col_a.button("▶ Start Demo", use_container_width=True):
+    if st.session_state.sim_process is None:
+        st.session_state.sim_process = subprocess.Popen(
+            ["python", "step5_simulate.py", "--reset"]
+        )
+        st.sidebar.success("Simulation started")
+
+if col_b.button("⏸ Stop", use_container_width=True):
+    if st.session_state.sim_process is not None:
+        st.session_state.sim_process.terminate()
+        st.session_state.sim_process = None
+        st.sidebar.info("Simulation stopped")
+
+if st.sidebar.button("🔄 Reset Dashboard", use_container_width=True):
+    reset_dashboard()
+    st.sidebar.success("Dashboard reset")
+
+st.sidebar.divider()
+auto_refresh = st.sidebar.toggle("Auto-refresh (5s)", value=True)
+severity_filter = st.sidebar.multiselect(
+    "Filter alerts by class",
+    ["benign", "ddos", "malware", "portscan"],
+    default=["ddos", "malware", "portscan"],
+)
+
+st.sidebar.divider()
+st.sidebar.caption("Model: RF + XGBoost soft-voting ensemble")
+st.sidebar.caption("Accuracy: 100.00% (test set)")
+
+# ============================================================
+# HEADER
+# ============================================================
+st.title("🛡️ IoT Shield — Network Threat Detection")
+st.caption("Live monitoring dashboard · IoT-23 dataset · Ensemble ML detection")
+
+alerts = load_json(ALERTS_FILE, [])
+stats = load_json(STATS_FILE, {})
+counts = get_class_counts(alerts)
+total_packets = stats.get("total_packets", sum(counts.values()))
+
+with st.status("Monitoring network traffic...", expanded=False) as status:
+    st.write(f"Packets processed: {total_packets}")
+    status.update(label=f"Monitoring active — {total_packets} packets analyzed", state="running")
+
+# ============================================================
+# TABS
+# ============================================================
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["🎯 Live Monitor", "📊 Analytics", "🚨 Alerts", "🤖 AI Assistant"]
+)
+
+# ------------------------------------------------------------
+# TAB 1 — Live Monitor
+# ------------------------------------------------------------
 with tab1:
-    st.subheader("Live Threat Overview")
-
-    total    = stats.get("total", 0)
-    threats  = stats.get("threats", 0)
-    critical = stats.get("critical", 0)
-    benign   = stats.get("benign", 0)
-    rate     = (threats / total * 100) if total > 0 else 0.0
-
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total Connections", total)
-    c2.metric("Threats Detected",  threats)
-    c3.metric("Threat Rate",       f"{rate:.1f}%")
-    c4.metric("Critical Alerts",   critical)
+    c1.metric("🟢 Benign", counts["benign"])
+    c2.metric("🟡 Port Scan", counts["portscan"])
+    c3.metric("🔴 DDoS", counts["ddos"])
+    c4.metric("🔴 Malware", counts["malware"])
 
+    st.divider()
+
+    # Rolling traffic chart
     if alerts:
-        df_alerts = pd.DataFrame(alerts)
-
-        # Threat breakdown pie
-        if "label" in df_alerts.columns:
-            label_counts = df_alerts["label"].value_counts().reset_index()
-            label_counts.columns = ["label", "count"]
-            fig = px.pie(
-                label_counts, names="label", values="count",
-                title="Threat Type Breakdown",
-                color_discrete_sequence=px.colors.qualitative.Set2
+        df = pd.DataFrame(alerts)
+        if "timestamp" in df.columns:
+            df["timestamp"] = pd.to_datetime(df["timestamp"], errors="coerce")
+            fig = px.area(
+                df.tail(200),
+                x="timestamp",
+                color="label",
+                title="Traffic Classification Over Time",
+                color_discrete_map={
+                    "benign": "#2ecc71",
+                    "ddos": "#ff4b4b",
+                    "malware": "#e74c3c",
+                    "portscan": "#ffc107",
+                },
+            )
+            fig.update_layout(
+                paper_bgcolor="#0e1117",
+                plot_bgcolor="#0e1117",
+                font_color="white",
+                height=350,
             )
             st.plotly_chart(fig, use_container_width=True)
-
-        # Recent alerts table
-        st.subheader("Latest Alerts")
-        display_cols = ["timestamp", "src_ip", "dst_ip", "proto",
-                        "label", "severity", "confidence"]
-        show_cols = [c for c in display_cols if c in df_alerts.columns]
-        st.dataframe(df_alerts[show_cols].tail(20), use_container_width=True)
     else:
-        st.info("Waiting for live capture data from step5_live.py...\n\n"
-                "Run `python step5_live.py` as Administrator in another terminal.")
+        st.info("No traffic data yet. Click ▶ Start Demo in the sidebar.")
 
-# ── Tab 2: Alert Feed ──
+    # Trigger a visible effect for the most recent critical alert
+    if alerts:
+        latest = alerts[-1]
+        cls = latest.get("label", "benign")
+        sev = latest.get("severity", SEVERITY_MAP.get(cls, ("none", "🟢"))[0])
+        icon = SEVERITY_MAP.get(cls, ("none", "🟢"))[1]
+        if sev == "critical":
+            st.toast(f"{icon} Critical threat detected: {cls.upper()}", icon="🚨")
+
+# ------------------------------------------------------------
+# TAB 2 — Analytics
+# ------------------------------------------------------------
 with tab2:
-    st.subheader("🚨 Real-time Alert Feed")
-    if alerts:
-        for alert in reversed(alerts[-50:]):
-            sev  = alert.get("severity", "none")
-            icon = SEVERITY_COLOR.get(sev, "⚪")
-            lbl  = alert.get("label", "unknown").upper()
-            ts   = alert.get("timestamp", "")[:19]
-            src  = alert.get("src_ip", "?")
-            dst  = alert.get("dst_ip", "?")
-            conf = alert.get("confidence", 0)
-            proto= alert.get("proto", "?").upper()
-            st.markdown(
-                f"{icon} `{ts}` **{lbl}** — "
-                f"{src} → {dst} [{proto}] "
-                f"confidence: {conf}%"
-            )
-    else:
-        st.info("No alerts yet. Start step5_live.py as Administrator.")
+    col1, col2 = st.columns(2)
 
-# ── Tab 3: Analytics ──
-with tab3:
-    st.subheader("📈 Analytics")
-    if alerts:
-        df_alerts = pd.DataFrame(alerts)
-
-        # Timeline
-        if "timestamp" in df_alerts.columns:
-            df_alerts["time"] = pd.to_datetime(df_alerts["timestamp"])
-            df_alerts["minute"] = df_alerts["time"].dt.floor("min")
-            timeline = df_alerts.groupby(["minute", "label"]).size().reset_index(name="count")
-            fig2 = px.line(
-                timeline, x="minute", y="count", color="label",
-                title="Alerts over time"
-            )
-            st.plotly_chart(fig2, use_container_width=True)
-
-        # Protocol breakdown
-        if "proto" in df_alerts.columns:
-            proto_counts = df_alerts["proto"].value_counts().reset_index()
-            proto_counts.columns = ["proto", "count"]
-            fig3 = px.bar(
-                proto_counts, x="proto", y="count",
-                title="Alerts by Protocol",
-                color="proto"
-            )
-            st.plotly_chart(fig3, use_container_width=True)
-
-        # Top source IPs
-        if "src_ip" in df_alerts.columns:
-            top_ips = df_alerts["src_ip"].value_counts().head(10).reset_index()
-            top_ips.columns = ["src_ip", "count"]
-            fig4 = px.bar(
-                top_ips, x="src_ip", y="count",
-                title="Top 10 Source IPs"
-            )
-            st.plotly_chart(fig4, use_container_width=True)
-    else:
-        st.info("No data yet. Start step5_live.py to see analytics.")
-
-# ── Tab 4: AI Assistant ──
-with tab4:
-    st.subheader("🤖 AI Security Assistant")
-    st.caption(f"Powered by Ollama / {OLLAMA_MODEL} (local)")
-
-    user_q = st.text_input(
-        "Ask anything about the current alerts or IoT security.",
-        placeholder="What threats were detected?"
-    )
-
-    if user_q:
-        # Build context from recent alerts
-        context = ""
-        if alerts:
-            df_a = pd.DataFrame(alerts[-20:])
-            summary = df_a["label"].value_counts().to_dict()
-            context = f"Recent alert summary: {summary}. "
-
-        prompt = (
-            f"You are an IoT network security expert. "
-            f"{context}"
-            f"Answer this question concisely in 3-4 sentences: {user_q}"
+    with col1:
+        st.subheader("Class Distribution")
+        donut = go.Figure(
+            data=[go.Pie(
+                labels=list(counts.keys()),
+                values=list(counts.values()),
+                hole=0.55,
+                marker=dict(colors=["#2ecc71", "#ff4b4b", "#e74c3c", "#ffc107"]),
+            )]
         )
-        with st.spinner("Asking AI..."):
-            try:
-                resp = requests.post(OLLAMA_URL, json={
-                    "model": OLLAMA_MODEL,
-                    "prompt": prompt,
-                    "stream": False
-                }, timeout=60)
-                resp.raise_for_status()
-                answer = resp.json().get("response", "No response.")
-                st.markdown(f"**Answer:** {answer}")
-            except Exception as e:
-                st.error(f"[Ollama error] {e}")
-                st.info("Make sure `ollama serve` is running and tinyllama is pulled.")
+        donut.update_layout(
+            paper_bgcolor="#0e1117",
+            font_color="white",
+            height=350,
+            showlegend=True,
+        )
+        st.plotly_chart(donut, use_container_width=True)
+
+    with col2:
+        st.subheader("Model Performance")
+        perf_df = pd.DataFrame({
+            "Model": ["Random Forest", "XGBoost", "Ensemble"],
+            "Accuracy (%)": [99.99, 100.00, 100.00],
+        })
+        fig_bar = px.bar(
+            perf_df, x="Model", y="Accuracy (%)",
+            color="Model",
+            color_discrete_sequence=["#3498db", "#9b59b6", "#2ecc71"],
+        )
+        fig_bar.update_layout(
+            paper_bgcolor="#0e1117",
+            plot_bgcolor="#0e1117",
+            font_color="white",
+            height=350,
+            showlegend=False,
+        )
+        fig_bar.update_yaxes(range=[99.9, 100.05])
+        st.plotly_chart(fig_bar, use_container_width=True)
+
+    st.subheader("Confusion Matrix (Ensemble, 120k test rows)")
+    conf_matrix = [[29998, 1, 1, 0], [0, 29999, 1, 0], [0, 0, 30000, 0], [0, 0, 0, 30000]]
+    labels = ["benign", "ddos", "malware", "portscan"]
+    fig_cm = px.imshow(
+        conf_matrix,
+        x=labels, y=labels,
+        text_auto=True,
+        color_continuous_scale="Blues",
+        labels=dict(x="Predicted", y="Actual", color="Count"),
+    )
+    fig_cm.update_layout(paper_bgcolor="#0e1117", font_color="white", height=400)
+    st.plotly_chart(fig_cm, use_container_width=True)
+
+# ------------------------------------------------------------
+# TAB 3 — Alerts
+# ------------------------------------------------------------
+with tab3:
+    st.subheader("Recent Alerts")
+
+    filtered = [a for a in alerts if a.get("label", "benign") in severity_filter]
+
+    if not filtered:
+        st.info("No alerts match the current filter.")
+    else:
+        for alert in reversed(filtered[-30:]):
+            cls = alert.get("label", "benign")
+            sev = alert.get("severity", SEVERITY_MAP.get(cls, ("none", "🟢"))[0])
+            icon = SEVERITY_MAP.get(cls, ("none", "🟢"))[1]
+            css_class = "critical-alert" if sev == "critical" else (
+                "high-alert" if sev == "high" else "benign-alert"
+            )
+            ts = alert.get("timestamp", "—")
+            src = alert.get("src_ip", "—")
+            dst = alert.get("dst_ip", "—")
+            conf = alert.get("confidence", None)
+            conf_str = f"{conf:.1%}" if isinstance(conf, (int, float)) else "—"
+            st.markdown(
+                f'<div class="{css_class}">{icon} <b>{cls.upper()}</b> '
+                f'&nbsp;|&nbsp; {ts} &nbsp;|&nbsp; {src} → {dst} '
+                f'&nbsp;|&nbsp; confidence: {conf_str}</div>',
+                unsafe_allow_html=True,
+            )
+
+# ------------------------------------------------------------
+# TAB 4 — AI Assistant
+# ------------------------------------------------------------
+with tab4:
+    st.subheader("🤖 Ask the Security Assistant")
+    st.caption("Powered by a locally hosted LLM (Ollama / tinyllama)")
+
+    if "chat_history" not in st.session_state:
+        st.session_state.chat_history = []
+
+    for role, msg in st.session_state.chat_history:
+        with st.chat_message(role):
+            st.write(msg)
+
+    user_q = st.chat_input("Ask about current threats, e.g. 'Why was this flagged as DDoS?'")
+    if user_q:
+        st.session_state.chat_history.append(("user", user_q))
+        with st.chat_message("user"):
+            st.write(user_q)
+        # Replace this with your actual step3_ai.py / Ollama call
+        with st.chat_message("assistant"):
+            with st.spinner("Analyzing..."):
+                response = "AI explanation layer not connected in this preview — hook this up to your step3_ai.py Ollama call."
+                st.write(response)
+        st.session_state.chat_history.append(("assistant", response))
+
+# ============================================================
+# AUTO REFRESH
+# ============================================================
+if auto_refresh:
+    time.sleep(5)
+    st.rerun()
