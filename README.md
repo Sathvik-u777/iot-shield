@@ -30,6 +30,13 @@ Real-time IoT network security threat detection using ML ensemble.
 - `malware` — Okiru botnet, C&C traffic
 - `portscan` — Horizontal port scanning
 
+## Setup
+\`\`\`
+conda create -n iotfinal python=3.11
+conda activate iotfinal
+pip install -r requirements.txt
+\`\`\`
+
 ## How to Run
 ```bash
 # Terminal 1 — Dashboard
@@ -42,7 +49,7 @@ python step5_simulate.py --reset
 
 # Terminal 3 — Live capture (run as Administrator)
 conda activate iotfinal
-python step5_live.py --reset
+python step5_live.py --reset 
 ```
 
 ## Base Paper
