@@ -193,17 +193,45 @@ def _stats_flusher():
         print(f"[~] Packets: {n:,}  |  Flows: {len(_flows)}  |  Scored: {len(_scored)}  |  Alerts: {_stats['total']}")
 
 def _pick_interface():
-    PREFERRED = [
-        r"\Device\NPF_{7BEA775F-3353-4943-85B9-330D8B568733}",
-        r"\Device\NPF_{282EE48D-FA62-4C27-A694-92C3580A2BA6}",
+    SKIP_KEYWORDS = [
+        "loopback", "virtual", "vpn", "bluetooth",
+        "wi-fi direct", "miniport", "npcap"
+    ]
+    PREFER_KEYWORDS = [
+        "wireless", "wi-fi", "wifi", "wlan", "802.11",  # WiFi
+        "ethernet", "local area",                         # Ethernet
+        "remote ndis", "usb",                             # USB tethering
+        "mobile", "hotspot", "tethering",                 # Hotspot
     ]
     try:
-        available = set(conf.ifaces.keys())
-        for iface in PREFERRED:
-            if iface in available:
-                print(f"[*] Interface: {iface}"); return iface
+        ifaces = conf.ifaces
+        candidates = []
+        for name, iface in ifaces.items():
+            desc = str(getattr(iface, "description", "")).lower()
+            # Skip virtual/loopback interfaces
+            if any(k in desc for k in SKIP_KEYWORDS):
+                continue
+            # Score by preference
+            score = 0
+            for i, kw in enumerate(PREFER_KEYWORDS):
+                if kw in desc:
+                    score = len(PREFER_KEYWORDS) - i
+                    break
+            if score > 0:
+                candidates.append((score, name, desc))
+
+        if candidates:
+            candidates.sort(reverse=True)
+            for score, name, desc in candidates:
+                print(f"    Found: {desc} [{name}]")
+            chosen = candidates[0][1]
+            print(f"[*] Auto-selected: {candidates[0][2]}")
+            return chosen
+
     except Exception as e:
-        print(f"[!] Interface error: {e}")
+        print(f"[!] Interface detection error: {e}")
+
+    print("[*] Using Scapy default interface")
     return None
 
 def _init_files():
@@ -226,7 +254,12 @@ if __name__ == "__main__":
     print(f"[*] Alert feed : {ALERTS_FILE}")
     print(f"[*] Score after: {_SCORE_AFTER} originator packets\n")
     try:
-        sniff(iface=iface, filter="ip", prn=_packet_callback, store=False)
+        if iface:
+            print(f"[*] Starting capture on selected interface...")
+            sniff(iface=iface, filter="ip", prn=_packet_callback, store=False)
+        else:
+            print(f"[*] Starting capture on all interfaces...")
+            sniff(filter="ip", prn=_packet_callback, store=False)
     except PermissionError:
         print("\n[!] Run as Administrator.")
     except KeyboardInterrupt:
