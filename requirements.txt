@@ -1,0 +1,65 @@
+altair==6.2.2
+anyio==4.14.2
+attrs==26.1.0
+blinker==1.9.0
+certifi==2026.7.22
+charset-normalizer==3.4.9
+click==8.4.2
+cloudpickle==3.1.2
+colorama==0.4.6
+defusedxml==0.7.1
+fonttools==4.63.0
+fpdf2==2.8.7
+gitdb==4.0.12
+GitPython==3.1.57
+h11==0.16.0
+httptools==0.8.0
+idna==3.18
+imbalanced-learn==0.14.2
+itsdangerous==2.2.0
+Jinja2==3.1.6
+joblib @ file:///C:/Users/task_176786803344065/croot/joblib_1767868150240/work
+jsonschema==4.26.0
+jsonschema-specifications==2025.9.1
+llvmlite==0.48.0
+MarkupSafe==3.0.3
+mkl-service==2.7.2
+mkl_fft @ file:///C:/Users/task_177730052050983/croot/mkl_fft_1777300602908/work
+mkl_random @ file:///C:/Users/task_178236951273675/croot/mkl_random_1782369661170/work
+narwhals @ file:///C:/Users/task_P-jV7FdiT6S3y_0/croot/narwhals_1783944179793/work
+numba==0.66.0
+numpy @ file:///C:/Users/task_178034591057081/croot/numpy_and_numpy_base_1780346079163/work/dist/numpy-2.4.6-cp311-cp311-win_amd64.whl#sha256=9501c2a46e9ccccb98ecbd21aa6a17a625993614e227c6e4cca63c4166c16876
+packaging==26.0
+pandas @ file:///C:/Users/task_178007176709004/croot/pandas_1780071914522/work
+pillow==12.3.0
+plotly==6.9.0
+protobuf==7.35.1
+pyarrow==24.0.0
+pydeck==0.9.3
+python-dateutil @ file:///C:/b/abs_3au_koqnbs/croot/python-dateutil_1716495777160/work
+python-multipart==0.0.32
+referencing==0.37.0
+requests==2.34.2
+rpds-py==2026.6.3
+scapy==2.7.0
+scikit-learn @ file:///C:/Users/task_178153019847084/croot/scikit-learn_1781530293444/work
+scipy @ file:///C:/Users/task_177627760864069/croot/scipy_1776277716744/work/dist/scipy-1.17.1-cp311-cp311-win_amd64.whl#sha256=1f66ce922ca8c2ce42275b9e9f2edaee63373304c9e7a123c79294e2d50ff230
+shap==0.51.0
+six @ file:///C:/b/abs_149wuyuo1o/croot/six_1744271521515/work
+sklearn-compat==0.1.6
+slicer==0.0.8
+smmap==5.0.3
+starlette==1.3.1
+streamlit==1.60.0
+streamlit-autorefresh==1.0.1
+tenacity==9.1.4
+threadpoolctl @ file:///C:/miniconda3/conda-bld/threadpoolctl_1764361787888/work
+toml==0.10.2
+tqdm==4.69.1
+typing_extensions==4.16.0
+tzdata @ file:///home/task_177806041933677/croot/python-tzdata_1778060738968/work
+urllib3==2.7.0
+uvicorn==0.51.0
+watchdog==6.0.0
+websockets==16.1.1
+xgboost==3.2.0
