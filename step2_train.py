@@ -75,7 +75,6 @@ print("    Saved label_enc.pkl")
 # ─────────────────────────────────────────────
 X = df[FEATURE_COLS].values
 y = df["label_enc"].values
-
 # Save feature cols
 joblib.dump(FEATURE_COLS, os.path.join(MODEL_DIR, "feature_cols.pkl"))
 print(f"\n    Feature columns saved: {FEATURE_COLS}")
@@ -97,6 +96,31 @@ X_train, X_test, y_train, y_test = train_test_split(
     X_scaled, y, test_size=0.2, random_state=42, stratify=y
 )
 print(f"    Train: {len(X_train):,}  |  Test: {len(X_test):,}")
+
+# Rebalance test set to real-world IoT traffic distribution
+# Real IoT networks: mostly benign with occasional attacks
+print("\n[5b] Applying real-world test distribution ...")
+test_df = pd.DataFrame(X_test, columns=FEATURE_COLS)
+test_df["label"] = y_test
+
+real_world = {"benign": 0.60, "ddos": 0.15, "malware": 0.10, "portscan": 0.15}
+test_parts = []
+total_test = 20000
+
+for cls_name, ratio in real_world.items():
+    cls_idx = label_enc.transform([cls_name])[0]
+    cls_rows = test_df[test_df["label"] == cls_idx]
+    n = int(total_test * ratio)
+    n = min(n, len(cls_rows))
+    sampled = cls_rows.sample(n=n, random_state=42)
+    test_parts.append(sampled)
+    print(f"    {cls_name:12s}: {n:,} samples ({ratio*100:.0f}%)")
+
+test_resampled = pd.concat(test_parts).sample(frac=1, random_state=42)
+X_test = test_resampled.drop("label", axis=1).values
+y_test = test_resampled["label"].values
+print(f"    Total test set: {len(X_test):,} rows")
+
 
 # ─────────────────────────────────────────────
 # Random Forest
