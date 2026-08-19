@@ -1,7 +1,18 @@
-# Python 
-.venv/ 
-__pycache__/ 
-*.pyc 
-models/*.pkl 
-data/dataset.csv 
-data/combined.csv 
+# Large data files
+data/dataset.csv
+data/combined.csv
+
+# Trained models (regenerate by running step1 + step2)
+models/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual environments (never used, but just in case)
+.venv/
+venv/
+
+# Miniconda env folder if inside project
+env/
