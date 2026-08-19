@@ -20,7 +20,7 @@ from streamlit_autorefresh import st_autorefresh
 # ─────────────────────────────────────────────
 # Paths
 # ─────────────────────────────────────────────
-BASE_DIR    = r"D:\final"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR   = os.path.join(BASE_DIR, "models")
 DATA_DIR    = os.path.join(BASE_DIR, "data")
 ALERTS_FILE = os.path.join(DATA_DIR, "live_alerts.json")
