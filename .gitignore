@@ -16,3 +16,6 @@ venv/
 
 # Miniconda env folder if inside project
 env/
+
+# Firebase service-account key — SECRET, never commit
+firebase_key.json

@@ -1,0 +1,12 @@
+# Local-only dependencies for the detection BACKEND.
+# Install these in the `iotfinal` conda env (Anaconda Prompt):
+#     pip install -r requirements-local.txt
+#
+# These are intentionally NOT in requirements.txt because the Streamlit Cloud
+# dashboard does not need them — it only reads Firebase over HTTPS. Keeping them
+# out keeps the cloud build small and reliable.
+
+scapy
+numba
+shap
+firebase-admin

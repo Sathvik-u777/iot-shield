@@ -6,6 +6,7 @@ Writes: data/live_alerts.json
 """
 
 import os
+import sys
 import json
 import time
 import threading
@@ -14,6 +15,10 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 from collections import defaultdict
+
+# Firebase Realtime Database bridge — pushes alerts/stats to the cloud dashboard.
+# Safe no-op if firebase isn't configured (see firebase_sync.py).
+import firebase_sync
 
 import logging
 logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
@@ -147,6 +152,10 @@ def _write_alerts():
 def _write_stats():
     with open(STATS_FILE,"w") as f: json.dump(_stats,f,indent=2)
 
+def _sync_firebase(force=False):
+    with _alerts_lock: snapshot = _alerts[-MAX_ALERTS:]
+    firebase_sync.push(snapshot, _stats, force=force)
+
 _scored = set()
 _SCORE_AFTER = 3
 
@@ -174,6 +183,7 @@ def _maybe_score(key, src_ip, dst_ip):
     }
     with _alerts_lock: _alerts.append(alert)
     _write_alerts(); _write_stats()
+    _sync_firebase()
     icon="🟢" if label=="benign" else ("🔴" if severity=="critical" else "🟡")
     print(f"{icon} [{ts_str[11:19]}] {src_ip}:{flow['id.orig_p']} -> "
           f"{dst_ip}:{flow['id.resp_p']}  {label.upper():10s}  "
@@ -189,6 +199,7 @@ def _packet_callback(pkt):
 def _stats_flusher():
     while True:
         time.sleep(5); _write_stats()
+        _sync_firebase()
         with _pkt_lock: n=_pkt_count
         print(f"[~] Packets: {n:,}  |  Flows: {len(_flows)}  |  Scored: {len(_scored)}  |  Alerts: {_stats['total']}")
 
@@ -249,6 +260,12 @@ if __name__ == "__main__":
     print("  Use --reset to clear alerts on startup")
     print("="*60)
     _init_files()
+    if "--reset" in sys.argv:
+        firebase_sync.push([], _stats, force=True)  # clear the cloud feed too
+    if firebase_sync.is_configured():
+        print("[*] Firebase : bridge enabled (cloud dashboard will receive live data)")
+    else:
+        print("[*] Firebase : not configured — writing local files only")
     threading.Thread(target=_stats_flusher, daemon=True).start()
     iface = _pick_interface()
     print(f"[*] Alert feed : {ALERTS_FILE}")
@@ -265,3 +282,4 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"\n[*] Stopped. Total scored: {_stats['total']}")
         _write_stats()
+        _sync_firebase(force=True)

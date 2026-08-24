@@ -17,6 +17,10 @@ import streamlit as st
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 
+# Firebase Realtime Database bridge — reads live data pushed by the local backend.
+# Falls back to local files automatically if Firebase isn't configured.
+import firebase_sync
+
 # ─────────────────────────────────────────────
 # Paths
 # ─────────────────────────────────────────────
@@ -322,8 +326,17 @@ def clear_data():
     with open(ALERTS_FILE,"w") as f: json.dump([],f)
     with open(STATS_FILE,"w") as f: json.dump({"total":0,"threats":0,"critical":0,"benign":0},f)
 
-alerts = load_alerts()
-stats  = load_stats()
+# Prefer live data from Firebase (pushed by the local backend); fall back to
+# the local JSON files / committed simulation snapshot when Firebase is unset.
+fb_alerts, fb_stats = firebase_sync.fetch()
+if fb_alerts is not None:
+    alerts = fb_alerts
+    stats  = fb_stats or {"total":0,"threats":0,"critical":0,"benign":0}
+    DATA_SOURCE = "Firebase · live"
+else:
+    alerts = load_alerts()
+    stats  = load_stats()
+    DATA_SOURCE = "Local file"
 
 # Colours per class
 CLASS_COLORS = {
@@ -383,7 +396,10 @@ with st.sidebar:
     st.session_state.filter_classes = selected if selected else ["benign","ddos","malware","portscan"]
 
     st.markdown("---")
-    st.markdown(f'<div style="font-size:0.7rem;color:#8b949e;">Last refresh<br>{datetime.now().strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section">DATA SOURCE</div>', unsafe_allow_html=True)
+    _src_color = "#3fb950" if DATA_SOURCE.startswith("Firebase") else "#d29922"
+    st.markdown(f'<div style="font-size:0.75rem;color:{_src_color};font-family:JetBrains Mono,monospace;">● {DATA_SOURCE}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size:0.7rem;color:#8b949e;margin-top:0.5rem;">Last refresh<br>{datetime.now().strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 # HEADER

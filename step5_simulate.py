@@ -19,6 +19,10 @@ warnings.filterwarnings("ignore")
 import pandas as pd
 from datetime import datetime
 
+# Firebase Realtime Database bridge — pushes alerts/stats to the cloud dashboard.
+# Safe no-op if firebase isn't configured (see firebase_sync.py).
+import firebase_sync
+
 # ─────────────────────────────────────────────
 # Paths
 # ─────────────────────────────────────────────
@@ -126,11 +130,12 @@ stats = {
 alerts = []
 MAX_ALERTS = 200
 
-def write_files():
+def write_files(force=False):
     with open(ALERTS_FILE, "w") as f:
         json.dump(alerts[-MAX_ALERTS:], f, indent=2)
     with open(STATS_FILE, "w") as f:
         json.dump(stats, f, indent=2)
+    firebase_sync.push(alerts[-MAX_ALERTS:], stats, force=force)
 
 # ─────────────────────────────────────────────
 # Init
@@ -141,6 +146,11 @@ if args.reset or not os.path.exists(ALERTS_FILE):
     print("[*] Alert feed cleared.")
 
 write_files()
+
+if firebase_sync.is_configured():
+    print("[*] Firebase : bridge enabled — cloud dashboard will receive this data")
+else:
+    print("[*] Firebase : not configured — writing local files only")
 
 # ─────────────────────────────────────────────
 # Simulate fake IPs for realism
@@ -220,9 +230,10 @@ try:
 
         time.sleep(DELAY)
 
+    write_files(force=True)
     print(f"\n[*] Simulation complete. {stats['total']} flows replayed.")
     print(f"[*] Threats: {stats['threats']}  |  Benign: {stats['benign']}")
 
 except KeyboardInterrupt:
     print(f"\n[*] Stopped. Replayed {stats['total']} flows.")
-    write_files()
+    write_files(force=True)
