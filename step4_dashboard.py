@@ -596,6 +596,14 @@ with tab3:
 
         st.markdown(f'<div style="font-size:0.75rem;color:#8b949e;margin-bottom:0.5rem;">Showing {len(filtered)} alerts</div>', unsafe_allow_html=True)
 
+              # Human friendly translations
+        HUMAN_MSG = {
+            "benign":   ("✅ Normal traffic", "Your network activity looks safe. No action needed.", "Check if this is expected activity."),
+            "ddos":     ("⚠️ High volume traffic", "Your device is making unusually many connections. This could be heavy app usage or a potential attack.", "Close background apps and check your WiFi usage."),
+            "malware":  ("🚨 Suspicious communication", "Your device may be communicating with a suspicious server. This could indicate malware.", "Run a virus scan and check recently installed apps."),
+            "portscan": ("🔍 Network scanning detected", "Someone may be probing your device looking for open ports.", "Ensure your firewall is enabled and avoid public WiFi."),
+        }
+
         rows_html = '<div class="alert-feed">'
         for a in reversed(filtered[-100:]):
             lbl   = a.get("label","?")
@@ -603,20 +611,35 @@ with tab3:
             color = CLASS_COLORS.get(lbl,"#888")
             ts    = str(a.get("timestamp",""))[:19].replace("T"," ")
             src   = a.get("src_ip","?")
-            dst   = a.get("dst_ip","?")
-            sp    = a.get("src_port","?")
-            dp    = a.get("dst_port","?")
             conf  = a.get("confidence",0)
             proto = str(a.get("proto","?")).upper()
+
+            # Risk level
+            if conf >= 80:
+                risk = "High Risk"
+                risk_color = "#f85149"
+            elif conf >= 60:
+                risk = "Medium Risk"
+                risk_color = "#d29922"
+            else:
+                risk = "Low Risk"
+                risk_color = "#3fb950"
+
+            title, msg, action = HUMAN_MSG.get(lbl, (lbl.upper(), "", ""))
+
             rows_html += f"""
-            <div class="alert-item">
-                <div class="alert-dot" style="background:{color}"></div>
-                <span class="alert-ts">{ts[11:]}</span>
-                <span class="alert-src">{src}:{sp}</span>
-                <span style="color:#8b949e">→</span>
-                <span class="alert-src">{dst}:{dp}</span>
-                <span class="alert-lbl" style="color:{color}">{lbl.upper()}</span>
-                <span class="alert-conf">{conf}% [{proto}]</span>
+            <div class="alert-item" style="flex-direction:column;align-items:flex-start;padding:0.8rem;">
+                <div style="display:flex;align-items:center;gap:0.6rem;width:100%;margin-bottom:0.4rem;">
+                    <div class="alert-dot" style="background:{color}"></div>
+                    <span style="font-weight:700;color:{color};font-size:0.82rem;">{title}</span>
+                    <span style="margin-left:auto;font-size:0.7rem;color:{risk_color};font-weight:600;">{risk}</span>
+                    <span class="alert-ts">{ts[11:]}</span>
+                </div>
+                <div style="font-size:0.78rem;color:#e6edf3;margin-bottom:0.3rem;">{msg}</div>
+                <div style="font-size:0.72rem;color:#8b949e;">💡 {action}</div>
+                <div style="font-size:0.68rem;color:#484f58;margin-top:0.3rem;">
+                    IP: {src} · {proto} · Confidence: {conf}% · ML label: {lbl}
+                </div>
             </div>"""
         rows_html += '</div>'
         st.markdown(rows_html, unsafe_allow_html=True)
