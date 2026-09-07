@@ -1,0 +1,80 @@
+{
+  "generated_at": "2026-09-07T21:18:40",
+  "test_set_size": 12379,
+  "class_labels": [
+    "benign",
+    "ddos",
+    "malware",
+    "portscan"
+  ],
+  "accuracy": {
+    "random_forest": 94.97,
+    "xgboost": 95.82,
+    "ensemble": 95.82
+  },
+  "classification_report": {
+    "benign": {
+      "precision": 0.9863909508660303,
+      "recall": 0.9295469686875416,
+      "f1-score": 0.9571257074258275,
+      "support": 6004.0
+    },
+    "ddos": {
+      "precision": 0.988793671720501,
+      "recall": 1.0,
+      "f1-score": 0.9943652635067949,
+      "support": 3000.0
+    },
+    "malware": {
+      "precision": 0.42278860569715143,
+      "recall": 0.752,
+      "f1-score": 0.5412667946257198,
+      "support": 375.0
+    },
+    "portscan": {
+      "precision": 0.9927152317880795,
+      "recall": 0.9993333333333333,
+      "f1-score": 0.9960132890365448,
+      "support": 3000.0
+    },
+    "accuracy": 0.9581549398174327,
+    "macro avg": {
+      "precision": 0.8476721150179405,
+      "recall": 0.9202200755052188,
+      "f1-score": 0.8721927636487218,
+      "support": 12379.0
+    },
+    "weighted avg": {
+      "precision": 0.9714325637500462,
+      "recall": 0.9581549398174327,
+      "f1-score": 0.9629770945148501,
+      "support": 12379.0
+    }
+  },
+  "confusion_matrix": [
+    [
+      5581,
+      33,
+      385,
+      5
+    ],
+    [
+      0,
+      3000,
+      0,
+      0
+    ],
+    [
+      76,
+      0,
+      282,
+      17
+    ],
+    [
+      1,
+      1,
+      0,
+      2998
+    ]
+  ]
+}
