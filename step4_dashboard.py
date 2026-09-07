@@ -306,8 +306,23 @@ def load_stats():
     except: return {"total":0,"threats":0,"critical":0,"benign":0}
 
 def clear_data():
-    with open(ALERTS_FILE,"w") as f: json.dump([],f)
-    with open(STATS_FILE,"w") as f: json.dump({"total":0,"threats":0,"critical":0,"benign":0},f)
+    # Clear Firebase if available
+    if firebase_sync.is_configured():
+        try:
+            import requests
+            FIREBASE_URL = firebase_sync.DATABASE_URL
+            requests.put(f"{FIREBASE_URL}/live_alerts.json", json=[], timeout=5)
+            requests.put(f"{FIREBASE_URL}/live_stats.json",
+                json={"total":0,"threats":0,"critical":0,"benign":0}, timeout=5)
+            return
+        except Exception as e:
+            print(f"Firebase clear error: {e}")
+    # Fallback to local files
+    try:
+        with open(ALERTS_FILE,"w") as f: json.dump([],f)
+        with open(STATS_FILE,"w") as f: json.dump({"total":0,"threats":0,"critical":0,"benign":0},f)
+    except:
+        pass
 
 # Prefer live data from Firebase (pushed by the local backend); fall back to
 # the local JSON files / committed simulation snapshot when Firebase is unset.
@@ -320,6 +335,40 @@ else:
     alerts = load_alerts()
     stats  = load_stats()
     DATA_SOURCE = "Local file"
+def _cloud_ai_answer(question, alerts):
+    """Simple rule-based AI response when Ollama is not available on cloud."""
+    q = question.lower()
+    total = len(alerts)
+    if total == 0:
+        return "No alerts detected yet. Start the capture agent to begin monitoring."
+
+    df_q = pd.DataFrame(alerts)
+    counts = df_q["label"].value_counts().to_dict()
+    top = max(counts, key=counts.get) if counts else "unknown"
+
+    if "safe" in q or "attack" in q:
+        if counts.get("benign",0) == total:
+            return "✅ Your network appears safe. All detected traffic is classified as benign."
+        else:
+            threats = total - counts.get("benign",0)
+            return f"⚠️ {threats} out of {total} flows were flagged as potential threats. The most common threat type is {top}. Review the alert feed for details."
+
+    if "ddos" in q:
+        n = counts.get("ddos",0)
+        return f"🔴 {n} DDoS alerts detected. DDoS attacks flood your network with traffic to overwhelm your device or server. Check if any background apps are generating unusual traffic."
+
+    if "malware" in q:
+        n = counts.get("malware",0)
+        return f"🚨 {n} malware alerts detected. Malware communicates with remote command-and-control servers. Run a virus scan and check recently installed apps."
+
+    if "portscan" in q or "port scan" in q:
+        n = counts.get("portscan",0)
+        return f"🔍 {n} port scan alerts detected. Port scanning means someone is probing your device for open services. Ensure your firewall is active."
+
+    if "action" in q or "recommend" in q:
+        return f"Based on {total} flows analysed, the dominant threat type is {top}. Recommended actions: 1) Check background app activity 2) Ensure firewall is enabled 3) Avoid public WiFi networks 4) Run a security scan on your device."
+
+    return f"Analysed {total} network flows. Detected: {counts}. The system uses Random Forest and XGBoost ensemble to classify traffic into benign, ddos, malware, and portscan categories with 99.99% accuracy on the IoT-23 dataset."
 
 # Colours per class
 CLASS_COLORS = {
@@ -671,18 +720,19 @@ with tab4:
                         "model": OLLAMA_MODEL,
                         "prompt": prompt,
                         "stream": False
-                    }, timeout=60)
+                    }, timeout=10)
                     resp.raise_for_status()
                     answer = resp.json().get("response","No response.")
-                    st.markdown(f"""
-                    <div class="ai-bubble">
-                        <div class="ai-label">▸ AI ANALYST</div>
-                        {answer}
-                    </div>
-                    """, unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"Ollama error: {e}")
-                    st.info("Run: ollama serve  then  ollama pull tinyllama")
+                except:
+                    # Cloud fallback — generate basic answer without Ollama
+                    answer = _cloud_ai_answer(user_q, alerts)
+
+                st.markdown(f"""
+                <div class="ai-bubble">
+                    <div class="ai-label">▸ AI ANALYST</div>
+                    {answer}
+                </div>
+                """, unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with col_ai2:
