@@ -224,23 +224,6 @@ html, body, [data-testid="stApp"] {
     border-bottom: 1px solid #21262d;
 }
 
-/* Buttons */
-.stButton > button {
-    background: #21262d !important;
-    color: #e6edf3 !important;
-    border: 1px solid #30363d !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.8rem !important;
-    font-weight: 500 !important;
-    border-radius: 6px !important;
-    padding: 0.4rem 1rem !important;
-    width: 100%;
-    transition: all 0.15s !important;
-}
-.stButton > button:hover {
-    background: #30363d !important;
-    border-color: #58a6ff !important;
-}
 
 /* AI chat */
 .ai-bubble {
@@ -352,22 +335,18 @@ SEV_COLORS = {"critical":"#f85149","high":"#d29922","none":"#3fb950"}
 # ─────────────────────────────────────────────
 with st.sidebar:
     st.markdown("## 🛡️ IoT Shield")
-    st.markdown('<div class="dash-sub">Threat Detection System</div>', unsafe_allow_html=True)
-    st.markdown("---")
+    st.markdown("Threat Detection System")
+    st.divider()
 
-    # Simulation controls
-    st.markdown('<div class="sidebar-section">SIMULATION</div>', unsafe_allow_html=True)
-    col_s1, col_s2 = st.columns(2)
-    with col_s1:
-        if st.button("▶ Start"):
-            clear_data()
-            st.session_state.running = True
-            st.success("Run step5_simulate.py")
-    with col_s2:
-        if st.button("⏹ Stop"):
-            st.session_state.running = False
-
-    if st.button("↺ Reset dashboard"):
+    st.markdown("**SIMULATION**")
+    if st.button("▶ Start", use_container_width=True):
+        clear_data()
+        st.session_state.running = True
+        st.success("Now run step5_simulate.py")
+    if st.button("⏹ Stop", use_container_width=True):
+        st.session_state.running = False
+        st.info("Stopped.")
+    if st.button("↺ Reset Dashboard", use_container_width=True):
         clear_data()
         st.rerun()
 
@@ -659,12 +638,13 @@ with tab4:
             "What triggers a port scan alert?",
             "Is the network under attack?",
         ]
-        q_cols = st.columns(2)
-        quick_q = None
-        for i, q in enumerate(quick_questions):
-            with q_cols[i % 2]:
-                if st.button(q, key=f"qq_{i}"):
-                    quick_q = q
+        quick_q = st.radio(
+            "Quick questions:",
+            ["-- Select --"] + quick_questions,
+            key="quick_radio"
+        )
+        if quick_q == "-- Select --":
+            quick_q = None
 
         user_q = st.text_input(
             "Ask about current threats, model reasoning, or specific flows",
