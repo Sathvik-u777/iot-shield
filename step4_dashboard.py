@@ -29,6 +29,7 @@ MODEL_DIR   = os.path.join(BASE_DIR, "models")
 DATA_DIR    = os.path.join(BASE_DIR, "data")
 ALERTS_FILE = os.path.join(DATA_DIR, "live_alerts.json")
 STATS_FILE  = os.path.join(DATA_DIR, "live_stats.json")
+METRICS_FILE = os.path.join(MODEL_DIR, "metrics.json")
 OLLAMA_URL  = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "tinyllama"
 
@@ -293,6 +294,23 @@ def load_models():
 rf_model, xgb_model, scaler, models_ok = load_models()
 
 # ─────────────────────────────────────────────
+# Load real training metrics (written by step2_train.py)
+#   Falls back to None if the file doesn't exist yet (e.g. training
+#   hasn't been re-run since this feature was added), and the UI
+#   below shows an explicit "not available" state instead of ever
+#   silently reverting to made-up numbers.
+# ─────────────────────────────────────────────
+@st.cache_data(ttl=5)
+def load_metrics():
+    try:
+        with open(METRICS_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+metrics = load_metrics()
+
+# ─────────────────────────────────────────────
 # Load data
 # ─────────────────────────────────────────────
 def load_alerts():
@@ -335,6 +353,7 @@ else:
     alerts = load_alerts()
     stats  = load_stats()
     DATA_SOURCE = "Local file"
+
 def _cloud_ai_answer(question, alerts):
     """Simple rule-based AI response when Ollama is not available on cloud."""
     q = question.lower()
@@ -368,7 +387,8 @@ def _cloud_ai_answer(question, alerts):
     if "action" in q or "recommend" in q:
         return f"Based on {total} flows analysed, the dominant threat type is {top}. Recommended actions: 1) Check background app activity 2) Ensure firewall is enabled 3) Avoid public WiFi networks 4) Run a security scan on your device."
 
-    return f"Analysed {total} network flows. Detected: {counts}. The system uses Random Forest and XGBoost ensemble to classify traffic into benign, ddos, malware, and portscan categories with 99.99% accuracy on the IoT-23 dataset."
+    ens_acc_str = f"{metrics['accuracy']['ensemble']:.2f}%" if metrics else "an ensemble of"
+    return f"Analysed {total} network flows. Detected: {counts}. The system uses a Random Forest and XGBoost ensemble to classify traffic into benign, ddos, malware, and portscan categories, achieving {ens_acc_str} accuracy on the held-out IoT-23 test set."
 
 # Colours per class
 CLASS_COLORS = {
@@ -550,56 +570,80 @@ with tab2:
 
     with col_b:
         st.markdown('<div class="chart-box"><div class="chart-title">Model performance</div>', unsafe_allow_html=True)
-        models_data = {
-            "Model":    ["Random Forest", "XGBoost", "Ensemble"],
-            "Accuracy": [99.99, 100.00, 100.00],
-        }
-        fig3 = go.Figure(go.Bar(
-            x=models_data["Model"],
-            y=models_data["Accuracy"],
-            marker_color=["#58a6ff","#d29922","#3fb950"],
-            text=[f"{v:.2f}%" for v in models_data["Accuracy"]],
-            textposition="outside",
-            textfont=dict(color="#e6edf3", family="JetBrains Mono", size=11),
-            width=0.5,
-        ))
-        fig3.update_layout(
-            paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
-            font=dict(color="#8b949e", family="Inter"),
-            xaxis=dict(showgrid=False, color="#8b949e"),
-            yaxis=dict(showgrid=True, gridcolor="#21262d", color="#8b949e",
-                       range=[99.8, 100.05]),
-            margin=dict(t=20,b=5,l=5,r=5), height=240,
-        )
-        st.plotly_chart(fig3, use_container_width=True)
-        st.markdown(
-            '<div style="font-size:0.7rem;color:#8b949e;text-align:center;">'
-            'RF + XGBoost soft-voting ensemble · Accuracy: 100.00% (test set)</div>',
-            unsafe_allow_html=True
-        )
+        if metrics:
+            acc = metrics["accuracy"]
+            models_data = {
+                "Model":    ["Random Forest", "XGBoost", "Ensemble"],
+                "Accuracy": [acc["random_forest"], acc["xgboost"], acc["ensemble"]],
+            }
+            y_lo = max(0, min(models_data["Accuracy"]) - 5)
+            fig3 = go.Figure(go.Bar(
+                x=models_data["Model"],
+                y=models_data["Accuracy"],
+                marker_color=["#58a6ff","#d29922","#3fb950"],
+                text=[f"{v:.2f}%" for v in models_data["Accuracy"]],
+                textposition="outside",
+                textfont=dict(color="#e6edf3", family="JetBrains Mono", size=11),
+                width=0.5,
+            ))
+            fig3.update_layout(
+                paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+                font=dict(color="#8b949e", family="Inter"),
+                xaxis=dict(showgrid=False, color="#8b949e"),
+                yaxis=dict(showgrid=True, gridcolor="#21262d", color="#8b949e",
+                           range=[y_lo, 100.5]),
+                margin=dict(t=20,b=5,l=5,r=5), height=240,
+            )
+            st.plotly_chart(fig3, use_container_width=True)
+            gen_at = metrics.get("generated_at", "unknown time")
+            n_test = metrics.get("test_set_size", "?")
+            st.markdown(
+                f'<div style="font-size:0.7rem;color:#8b949e;text-align:center;">'
+                f'RF + XGBoost soft-voting ensemble · Accuracy: {acc["ensemble"]:.2f}% '
+                f'(test set, n={n_test:,}) · trained {gen_at}</div>' if isinstance(n_test, int) else
+                f'<div style="font-size:0.7rem;color:#8b949e;text-align:center;">'
+                f'RF + XGBoost soft-voting ensemble · Accuracy: {acc["ensemble"]:.2f}% (test set) · trained {gen_at}</div>',
+                unsafe_allow_html=True
+            )
+        else:
+            st.markdown(
+                '<div class="empty-state">No metrics.json found in models/. '
+                'Run step2_train.py to generate real accuracy numbers.</div>',
+                unsafe_allow_html=True
+            )
         st.markdown('</div>', unsafe_allow_html=True)
 
     # Confusion matrix
-    st.markdown('<div class="chart-box"><div class="chart-title">Confusion matrix — Ensemble (120k test rows)</div>', unsafe_allow_html=True)
-    cm_labels = ["Benign","DDoS","Malware","Port Scan"]
-    cm_data = [
-        [29998, 1,     1,     0],
-        [0,     29999, 1,     0],
-        [0,     0,     30000, 0],
-        [0,     0,     0,     30000],
-    ]
-    html_cm = '<table class="cm-table"><tr><th>actual \\ predicted</th>'
-    for lbl in cm_labels:
-        html_cm += f"<th>{lbl}</th>"
-    html_cm += "</tr>"
-    for i, row in enumerate(cm_data):
-        html_cm += f"<tr><th>{cm_labels[i]}</th>"
-        for j, val in enumerate(row):
-            cls = "cm-diag" if i==j else ("cm-err" if val>0 else "")
-            html_cm += f'<td class="{cls}">{val:,}</td>'
+    if metrics:
+        cm_labels = [c.capitalize() for c in metrics["class_labels"]]
+        cm_data = metrics["confusion_matrix"]
+        n_test = metrics.get("test_set_size", sum(sum(r) for r in cm_data))
+        cm_title = f"Confusion matrix — Ensemble ({n_test:,} test rows)"
+    else:
+        cm_labels = ["Benign","DDoS","Malware","Port Scan"]
+        cm_data = None
+        cm_title = "Confusion matrix — Ensemble"
+
+    st.markdown(f'<div class="chart-box"><div class="chart-title">{cm_title}</div>', unsafe_allow_html=True)
+    if cm_data is not None:
+        html_cm = '<table class="cm-table"><tr><th>actual \\ predicted</th>'
+        for lbl in cm_labels:
+            html_cm += f"<th>{lbl}</th>"
         html_cm += "</tr>"
-    html_cm += "</table>"
-    st.markdown(html_cm, unsafe_allow_html=True)
+        for i, row in enumerate(cm_data):
+            html_cm += f"<tr><th>{cm_labels[i]}</th>"
+            for j, val in enumerate(row):
+                cls = "cm-diag" if i==j else ("cm-err" if val>0 else "")
+                html_cm += f'<td class="{cls}">{val:,}</td>'
+            html_cm += "</tr>"
+        html_cm += "</table>"
+        st.markdown(html_cm, unsafe_allow_html=True)
+    else:
+        st.markdown(
+            '<div class="empty-state">No metrics.json found in models/. '
+            'Run step2_train.py to generate the real confusion matrix.</div>',
+            unsafe_allow_html=True
+        )
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ── TAB 3: Alerts ────────────────────────────
