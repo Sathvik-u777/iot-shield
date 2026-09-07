@@ -12,11 +12,16 @@ Fixes applied vs previous version:
      train and test.
   3. Exact duplicate rows are dropped before splitting.
   4. Removed the duplicated real-world-distribution block (was run twice).
+  5. Real metrics (accuracy, classification report, confusion matrix) are
+     now saved to models/metrics.json so the dashboard can display the
+     ACTUAL numbers from this run instead of hardcoded placeholder values.
 
 Run: python step2_train.py
 """
 
 import os
+import json
+from datetime import datetime
 import joblib
 import numpy as np
 import pandas as pd
@@ -33,7 +38,8 @@ DATA_DIR   = os.path.join(BASE_DIR, "data")
 MODEL_DIR  = os.path.join(BASE_DIR, "models")
 os.makedirs(MODEL_DIR, exist_ok=True)
 
-INPUT      = os.path.join(DATA_DIR, "combined.csv")
+INPUT        = os.path.join(DATA_DIR, "combined.csv")
+METRICS_FILE = os.path.join(MODEL_DIR, "metrics.json")
 
 # ─────────────────────────────────────────────
 # Feature columns
@@ -234,16 +240,44 @@ print(f"  Random Forest accuracy : {rf_acc*100:.2f}%")
 print(f"  XGBoost accuracy       : {xgb_acc*100:.2f}%")
 print(f"  Ensemble accuracy      : {ens_acc*100:.2f}%")
 
-print("\n  Classification Report (Ensemble):")
-print(classification_report(
+report_dict = classification_report(
+    y_test, ens_preds,
+    target_names=label_enc.classes_,
+    output_dict=True
+)
+report_text = classification_report(
     y_test, ens_preds,
     target_names=label_enc.classes_
-))
+)
+print("\n  Classification Report (Ensemble):")
+print(report_text)
 
-print("  Confusion Matrix (Ensemble):")
 cm = confusion_matrix(y_test, ens_preds)
+print("  Confusion Matrix (Ensemble):")
 print(f"  Classes: {list(label_enc.classes_)}")
 print(cm)
+
+# ─────────────────────────────────────────────
+# Save real metrics for the dashboard to read
+#   (this replaces the hardcoded 99.99/100/100 placeholder numbers
+#   that step4_dashboard.py used to show)
+# ─────────────────────────────────────────────
+print("\n[12] Saving metrics.json for dashboard ...")
+metrics = {
+    "generated_at": datetime.now().isoformat(timespec="seconds"),
+    "test_set_size": int(len(y_test)),
+    "class_labels": list(label_enc.classes_),
+    "accuracy": {
+        "random_forest": round(float(rf_acc) * 100, 2),
+        "xgboost": round(float(xgb_acc) * 100, 2),
+        "ensemble": round(float(ens_acc) * 100, 2),
+    },
+    "classification_report": report_dict,
+    "confusion_matrix": cm.tolist(),
+}
+with open(METRICS_FILE, "w") as f:
+    json.dump(metrics, f, indent=2)
+print(f"    Saved {METRICS_FILE}")
 
 print("\n" + "=" * 60)
 print("  All models saved to D:\\final\\models\\")
