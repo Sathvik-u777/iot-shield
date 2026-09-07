@@ -692,17 +692,18 @@ with tab4:
             ["-- Select --"] + quick_questions,
             key="quick_radio"
         )
-        if quick_q == "-- Select --":
-            quick_q = None
 
         user_q = st.text_input(
-            "Ask about current threats, model reasoning, or specific flows",
-            value=quick_q or "",
+            "Or type your own question:",
             placeholder="e.g. Explain the DDoS alerts...",
             key="ai_input"
         )
 
-        if user_q:
+        # Use radio selection if no text typed
+        final_q = user_q if user_q else (quick_q if quick_q != "-- Select --" else None)
+
+        if final_q:
+            user_q = final_q
             context = ""
             if alerts:
                 df_q = pd.DataFrame(alerts[-30:])
@@ -712,7 +713,7 @@ with tab4:
 
             prompt = (
                 f"You are an expert IoT network security analyst. {context}"
-                f"Answer concisely in 3-4 sentences: {user_q}"
+                f"Answer concisely in 3-4 sentences: {final_q}"
             )
             with st.spinner("Analysing..."):
                 try:
@@ -725,7 +726,7 @@ with tab4:
                     answer = resp.json().get("response","No response.")
                 except:
                     # Cloud fallback — generate basic answer without Ollama
-                    answer = _cloud_ai_answer(user_q, alerts)
+                    answer = _cloud_ai_answer(final_q, alerts)
 
                 st.markdown(f"""
                 <div class="ai-bubble">
