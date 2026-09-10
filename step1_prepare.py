@@ -16,7 +16,7 @@ import pandas as pd
 BASE_DIR  = r"D:\final"
 DATA_DIR  = os.path.join(BASE_DIR, "data")
 INPUT     = os.path.join(DATA_DIR, "dataset.csv")
-OUTPUT    = os.path.join(DATA_DIR, "combined.csv")hi
+OUTPUT    = os.path.join(DATA_DIR, "combined.csv")
  
 # ─────────────────────────────────────────────
 # Label mapping
@@ -45,7 +45,7 @@ FEATURE_COLS = [
     "conn_state", "missed_bytes", "orig_pkts", "orig_ip_bytes",
     "resp_pkts", "resp_ip_bytes"
 ]
- 
+
 NUM_COLS = [
     "ts", "id.orig_p", "id.resp_p", "missed_bytes",
     "orig_pkts", "orig_ip_bytes", "resp_pkts", "resp_ip_bytes"

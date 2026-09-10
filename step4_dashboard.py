@@ -52,33 +52,65 @@ st.markdown("""
 
 /* Base */
 html, body, [data-testid="stApp"] {
-    background-color: #0d1117 !important;
+    background:
+        radial-gradient(circle at 92% -10%, rgba(40, 167, 156, 0.14), transparent 29rem),
+        radial-gradient(circle at 8% 8%, rgba(88, 166, 255, 0.08), transparent 25rem),
+        #0b1016 !important;
     color: #e6edf3 !important;
     font-family: 'Inter', sans-serif !important;
 }
+[data-testid="stAppViewContainer"] { background: transparent !important; }
+[data-testid="stHeader"] { background: transparent !important; }
+[data-testid="stMainBlockContainer"] { padding-top: 2rem !important; }
 [data-testid="stSidebar"] {
-    background-color: #161b22 !important;
-    border-right: 1px solid #21262d !important;
+    background: linear-gradient(180deg, #121a22 0%, #0d131a 100%) !important;
+    border-right: 1px solid #263640 !important;
+    box-shadow: 12px 0 40px rgba(0, 0, 0, 0.16);
 }
 [data-testid="stSidebar"] * { color: #e6edf3 !important; }
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] h2 {
+    color: #8be9dc !important;
+    letter-spacing: -0.03em;
+}
 #MainMenu, footer { visibility: hidden; }
+
+/* Native controls */
+[data-testid="stButton"] button, [data-testid="stSelectbox"] [data-baseweb="select"] > div,
+[data-testid="stTextInput"] input, [data-testid="stRadio"] label {
+    background: #131c24 !important;
+    border-color: #2b3d48 !important;
+    color: #e6edf3 !important;
+}
+[data-testid="stButton"] button:hover {
+    border-color: #62d9ca !important;
+    color: #8be9dc !important;
+    box-shadow: 0 0 0 1px rgba(98, 217, 202, 0.15);
+}
+[data-testid="stToggle"] [data-baseweb="checkbox"] > div {
+    background-color: #2b3d48 !important;
+}
+[data-testid="stToggle"] [aria-checked="true"] [data-baseweb="checkbox"] > div {
+    background-color: #2fb7a8 !important;
+}
 
 /* Header */
 .dash-header {
-    background: #161b22;
-    border-bottom: 1px solid #21262d;
-    padding: 0.7rem 1.5rem;
+    background: linear-gradient(105deg, rgba(20, 32, 41, 0.96), rgba(15, 24, 31, 0.86));
+    border: 1px solid #29404b;
+    border-left: 3px solid #62d9ca;
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+    padding: 1rem 1.35rem;
     display: flex;
     align-items: center;
     gap: 1rem;
     margin-bottom: 1.2rem;
-    border-radius: 6px;
+    border-radius: 10px;
 }
 .dash-logo {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     font-weight: 600;
-    color: #58a6ff;
+    color: #8be9dc;
     letter-spacing: 0.05em;
 }
 .dash-title {
@@ -92,8 +124,8 @@ html, body, [data-testid="stApp"] {
     font-family: 'JetBrains Mono', monospace;
 }
 .dash-chip {
-    background: #21262d;
-    border: 1px solid #30363d;
+    background: rgba(11, 16, 22, 0.52);
+    border: 1px solid #304652;
     border-radius: 20px;
     padding: 0.2rem 0.7rem;
     font-size: 0.7rem;
@@ -103,6 +135,9 @@ html, body, [data-testid="stApp"] {
 }
 .dash-chip span { color: #3fb950; }
 
+/* Give the tab strip a calm, glassy anchor below the header. */
+[data-testid="stTabs"] { background: rgba(13, 20, 27, 0.42); border-radius: 10px; padding: 0.2rem 0.4rem 0; }
+
 /* Metric cards */
 .metric-row {
     display: grid;
@@ -111,14 +146,17 @@ html, body, [data-testid="stApp"] {
     margin-bottom: 1rem;
 }
 .mcard {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 8px;
-    padding: 1rem 1.2rem;
+    background: linear-gradient(145deg, #17242c, #111a21);
+    border: 1px solid #29404b;
+    border-radius: 10px;
+    padding: 1rem 1.15rem;
     display: flex;
     align-items: center;
     gap: 0.8rem;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+    transition: transform 0.2s ease, border-color 0.2s ease;
 }
+.mcard:hover { transform: translateY(-2px); border-color: #4c7881; }
 .mcard-dot {
     width: 10px; height: 10px;
     border-radius: 50%;
@@ -135,7 +173,7 @@ html, body, [data-testid="stApp"] {
     font-family: 'JetBrains Mono', monospace;
     font-size: 1.8rem;
     font-weight: 700;
-    color: #e6edf3;
+    color: #f4f8fb;
     line-height: 1;
 }
 
@@ -164,16 +202,17 @@ html, body, [data-testid="stApp"] {
 
 /* Chart containers */
 .chart-box {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 8px;
-    padding: 1rem;
+    background: linear-gradient(145deg, rgba(22, 34, 43, 0.96), rgba(15, 23, 30, 0.96));
+    border: 1px solid #273b46;
+    border-radius: 10px;
+    padding: 1.1rem;
     margin-bottom: 0.8rem;
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.13);
 }
 .chart-title {
     font-size: 0.78rem;
     font-weight: 600;
-    color: #8b949e;
+    color: #91aaaF;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-bottom: 0.8rem;
@@ -189,8 +228,8 @@ html, body, [data-testid="stApp"] {
     margin-bottom: 0.3rem;
     font-family: 'JetBrains Mono', monospace;
     font-size: 0.72rem;
-    background: #161b22;
-    border: 1px solid #21262d;
+    background: #131e26;
+    border: 1px solid #263943;
     transition: border-color 0.2s;
 }
 .alert-item:hover { border-color: #30363d; }
@@ -209,7 +248,7 @@ html, body, [data-testid="stApp"] {
     font-family: 'JetBrains Mono', monospace;
 }
 .cm-table th { background: #161b22; color: #8b949e; font-weight: 600; }
-.cm-table td { background: #0d1117; color: #e6edf3; }
+.cm-table td { background: #111a21; color: #e6edf3; }
 .cm-diag { background: #1f3a2a !important; color: #3fb950 !important; font-weight: 700; }
 .cm-err  { background: #3d1a1a !important; color: #f85149 !important; font-weight: 700; }
 
@@ -228,9 +267,9 @@ html, body, [data-testid="stApp"] {
 
 /* AI chat */
 .ai-bubble {
-    background: #161b22;
-    border: 1px solid #21262d;
-    border-radius: 8px;
+    background: linear-gradient(145deg, #172b2d, #132026);
+    border: 1px solid #2d665f;
+    border-radius: 10px;
     padding: 1rem;
     font-size: 0.82rem;
     line-height: 1.6;
@@ -239,7 +278,7 @@ html, body, [data-testid="stApp"] {
 }
 .ai-label {
     font-size: 0.7rem;
-    color: #3fb950;
+    color: #8be9dc;
     font-weight: 600;
     letter-spacing: 0.1em;
     margin-bottom: 0.4rem;
@@ -258,6 +297,19 @@ html, body, [data-testid="stApp"] {
     font-size: 0.85rem;
 }
 .empty-icon { font-size: 2rem; margin-bottom: 0.5rem; }
+
+@media (max-width: 900px) {
+    .metric-row { grid-template-columns: repeat(2, 1fr); }
+    .dash-header { flex-wrap: wrap; }
+    .dash-chip { margin-left: 0; }
+}
+@media (max-width: 560px) {
+    .metric-row { grid-template-columns: 1fr 1fr; gap: 0.55rem; }
+    .mcard { padding: 0.8rem; }
+    .mcard-value { font-size: 1.45rem; }
+    .dash-header { padding: 0.9rem; }
+    .dash-sub { font-size: 0.68rem; }
+}
 
 /* Scrollable alert feed */
 .alert-feed { max-height: 420px; overflow-y: auto; }
