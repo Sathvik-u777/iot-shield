@@ -38,7 +38,8 @@ OLLAMA_MODEL = "tinyllama"
 # ─────────────────────────────────────────────
 LAPTOP_SENSOR_URL = "https://github.com/user-attachments/files/32327893/sensor-package-laptop.zip"
 PHONE_SENSOR_URL  = "https://github.com/user-attachments/files/32327919/sensor-package-phone.zip"
-
+TERMUX_INSTALL_URL = "https://f-droid.org/en/packages/com.termux/"
+PHONE_AGENT_RAW_URL = "https://raw.githubusercontent.com/Sathvik-u777/iot-shield/main/phone_agent.py"
 # ─────────────────────────────────────────────
 # Page config
 # ─────────────────────────────────────────────
@@ -506,9 +507,18 @@ with st.sidebar:
         unsafe_allow_html=True
     )
     st.markdown(
-        f'<a href="{PHONE_SENSOR_URL}" target="_blank" class="sensor-btn">'
-        f'<span class="icon">📱</span> Phone Sensor (Android)</a>',
+        f'<a href="{TERMUX_INSTALL_URL}" target="_blank" class="sensor-btn">'
+        f'<span class="icon">📱</span> 1. Install Termux (Android)</a>',
         unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div class="sensor-note">2. Open Termux and paste:</div>',
+        unsafe_allow_html=True
+    )
+    st.code(
+        f"pkg install python -y && pip install requests && "
+        f"curl -O {PHONE_AGENT_RAW_URL} && python phone_agent.py",
+        language="bash"
     )
     st.markdown(
         '<div class="sensor-note">Download, extract, then follow the included README to start monitoring.</div>',
