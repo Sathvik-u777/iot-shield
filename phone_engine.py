@@ -13,7 +13,7 @@ import pandas as pd
 import requests
 from datetime import datetime
 
-BASE_DIR     = r"D:\final"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODEL_DIR    = os.path.join(BASE_DIR, "models")
 FIREBASE_URL = "https://iot-shield-7ce30-default-rtdb.asia-southeast1.firebasedatabase.app"
 
