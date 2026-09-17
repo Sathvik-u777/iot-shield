@@ -270,6 +270,39 @@ html, body, [data-testid="stApp"] {
     border-bottom: 1px solid #21262d;
 }
 
+/* Sensor download buttons */
+.sensor-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: linear-gradient(135deg, #16323a, #0e1f24);
+    border: 1px solid #2fb7a8;
+    border-radius: 8px;
+    padding: 0.65rem 0.9rem;
+    margin-bottom: 0.5rem;
+    text-decoration: none !important;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #8be9dc !important;
+    box-shadow: 0 0 0 rgba(47, 183, 168, 0);
+    transition: box-shadow 0.25s ease, transform 0.2s ease, border-color 0.2s ease;
+}
+.sensor-btn:hover {
+    box-shadow: 0 0 16px rgba(47, 183, 168, 0.45);
+    border-color: #62d9ca;
+    transform: translateY(-1px);
+    color: #ffffff !important;
+}
+.sensor-btn .icon {
+    font-size: 1rem;
+}
+.sensor-note {
+    font-size: 0.68rem;
+    color: #8b949e;
+    margin: 0.2rem 0 1rem 0;
+    line-height: 1.4;
+}
 
 /* AI chat */
 .ai-bubble {
@@ -465,6 +498,25 @@ with st.sidebar:
     st.markdown("Threat Detection System")
     st.divider()
 
+    # ── GET THE SENSOR (top of sidebar, styled as buttons) ──
+    st.markdown('<div class="sidebar-section">GET THE SENSOR</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<a href="{LAPTOP_SENSOR_URL}" target="_blank" class="sensor-btn">'
+        f'<span class="icon">💻</span> Laptop Sensor (Windows)</a>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        f'<a href="{PHONE_SENSOR_URL}" target="_blank" class="sensor-btn">'
+        f'<span class="icon">📱</span> Phone Sensor (Android)</a>',
+        unsafe_allow_html=True
+    )
+    st.markdown(
+        '<div class="sensor-note">Download, extract, then follow the included README to start monitoring.</div>',
+        unsafe_allow_html=True
+    )
+
+    st.markdown("---")
+
     st.markdown("**SIMULATION**")
     if st.button("▶ Start", use_container_width=True):
         clear_data()
@@ -506,16 +558,6 @@ with st.sidebar:
     _src_color = "#3fb950" if DATA_SOURCE.startswith("Firebase") else "#d29922"
     st.markdown(f'<div style="font-size:0.75rem;color:{_src_color};font-family:JetBrains Mono,monospace;">● {DATA_SOURCE}</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="font-size:0.7rem;color:#8b949e;margin-top:0.5rem;">Last refresh<br>{datetime.now().strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
-
-    st.markdown("---")
-    st.markdown('<div class="sidebar-section">GET THE SENSOR</div>', unsafe_allow_html=True)
-    st.markdown(f"[⬇ Laptop Sensor (Windows)]({LAPTOP_SENSOR_URL})")
-    st.markdown(f"[⬇ Phone Sensor (Android)]({PHONE_SENSOR_URL})")
-    st.markdown(
-        '<div style="font-size:0.68rem;color:#8b949e;margin-top:0.4rem;">'
-        'Download, extract, then follow the included README to start monitoring.'
-        '</div>', unsafe_allow_html=True
-    )
 
 # ─────────────────────────────────────────────
 # HEADER
