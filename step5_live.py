@@ -3,6 +3,11 @@ step5_live.py — IoT Shield Live Capture & Detection
 Run as Administrator: python step5_live.py
 Writes: data/live_alerts.json
         data/live_stats.json
+
+Can also be imported and run in-process (e.g. from a PyInstaller-frozen
+installer) via:
+    import step5_live
+    step5_live.main(reset=True)
 """
 
 import os
@@ -245,22 +250,26 @@ def _pick_interface():
     print("[*] Using Scapy default interface")
     return None
 
-def _init_files():
-    import sys
-    reset = "--reset" in sys.argv
+def _init_files(reset):
     if reset or not os.path.exists(ALERTS_FILE):
         with open(ALERTS_FILE,"w") as f: json.dump([],f)
         if reset: print("[*] Alert feed cleared.")
     if reset or not os.path.exists(STATS_FILE):
         _write_stats()
 
-if __name__ == "__main__":
+def main(reset=False):
+    """
+    Callable entry point — same logic that used to live under
+    `if __name__ == "__main__":`, now reusable both from the CLI
+    (`python step5_live.py --reset`) and from an importer such as
+    a PyInstaller-frozen sensor_main.py (`step5_live.main(reset=True)`).
+    """
     print("="*60)
     print("  IoT Shield - Live Capture  (Ctrl+C to stop)")
     print("  Use --reset to clear alerts on startup")
     print("="*60)
-    _init_files()
-    if "--reset" in sys.argv:
+    _init_files(reset)
+    if reset:
         firebase_sync.push([], _stats, force=True)  # clear the cloud feed too
     if firebase_sync.is_configured():
         print("[*] Firebase : bridge enabled (cloud dashboard will receive live data)")
@@ -283,3 +292,6 @@ if __name__ == "__main__":
         print(f"\n[*] Stopped. Total scored: {_stats['total']}")
         _write_stats()
         _sync_firebase(force=True)
+
+if __name__ == "__main__":
+    main(reset="--reset" in sys.argv)
