@@ -34,6 +34,12 @@ OLLAMA_URL  = "http://localhost:11434/api/generate"
 OLLAMA_MODEL = "tinyllama"
 
 # ─────────────────────────────────────────────
+# Sensor download links (GitHub-hosted ZIPs)
+# ─────────────────────────────────────────────
+LAPTOP_SENSOR_URL = "https://github.com/user-attachments/files/32327893/sensor-package-laptop.zip"
+PHONE_SENSOR_URL  = "https://github.com/user-attachments/files/32327919/sensor-package-phone.zip"
+
+# ─────────────────────────────────────────────
 # Page config
 # ─────────────────────────────────────────────
 st.set_page_config(
@@ -500,6 +506,16 @@ with st.sidebar:
     _src_color = "#3fb950" if DATA_SOURCE.startswith("Firebase") else "#d29922"
     st.markdown(f'<div style="font-size:0.75rem;color:{_src_color};font-family:JetBrains Mono,monospace;">● {DATA_SOURCE}</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="font-size:0.7rem;color:#8b949e;margin-top:0.5rem;">Last refresh<br>{datetime.now().strftime("%H:%M:%S")}</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown('<div class="sidebar-section">GET THE SENSOR</div>', unsafe_allow_html=True)
+    st.markdown(f"[⬇ Laptop Sensor (Windows)]({LAPTOP_SENSOR_URL})")
+    st.markdown(f"[⬇ Phone Sensor (Android)]({PHONE_SENSOR_URL})")
+    st.markdown(
+        '<div style="font-size:0.68rem;color:#8b949e;margin-top:0.4rem;">'
+        'Download, extract, then follow the included README to start monitoring.'
+        '</div>', unsafe_allow_html=True
+    )
 
 # ─────────────────────────────────────────────
 # HEADER
